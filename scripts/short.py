@@ -1,4 +1,5 @@
 import os,json,re,subprocess,requests
+from datetime import datetime, timezone
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; WORK=ROOT/"work"; WORK.mkdir(exist_ok=True)
 OPENAI=os.environ.get("OPENAI_API_KEY","").strip(); PEXELS=os.environ.get("PEXELS_API_KEY","").strip()
@@ -92,7 +93,10 @@ def upload(path,obj):
  c=Credentials(None,refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"],token_uri="https://oauth2.googleapis.com/token",client_id=os.environ["YOUTUBE_CLIENT_ID"],client_secret=os.environ["YOUTUBE_CLIENT_SECRET"],scopes=["https://www.googleapis.com/auth/youtube.upload"]); c.refresh(Request())
  yt=build("youtube","v3",credentials=c)
  body={"snippet":{"title":obj["title"][:100],"description":obj.get("description","")+"\n\n"+" ".join(obj.get("hashtags",[])),"categoryId":"27","tags":["psychology","science","human behavior","brain","why"]},"status":{"privacyStatus":"public","selfDeclaredMadeForKids":False}}
- r=yt.videos().insert(part="snippet,status",body=body,media_body=MediaFileUpload(str(path),chunksize=-1,resumable=True)).execute(); print("Published:",r["id"])
+ r=yt.videos().insert(part="snippet,status",body=body,media_body=MediaFileUpload(str(path),chunksize=-1,resumable=True)).execute()
+ vid=r["id"]
+ (WORK/"youtube_upload.json").write_text(json.dumps({"video_id":vid,"title":obj["title"][:100],"topic":obj.get("topic","")[:300],"link":f"https://youtu.be/{vid}","kind":"Shorts","published":datetime.now(timezone.utc).isoformat()},ensure_ascii=False,indent=2))
+ print("Published:",vid)
 if __name__=="__main__":
  missing=[k for k in ("OPENAI_API_KEY","YOUTUBE_CLIENT_ID","YOUTUBE_CLIENT_SECRET","YOUTUBE_REFRESH_TOKEN") if not os.environ.get(k,"").strip()]
  if missing: raise RuntimeError("Missing required GitHub Actions credentials: "+", ".join(missing))
