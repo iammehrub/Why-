@@ -17,9 +17,25 @@ def gen(prompt):
     last=RuntimeError(f"OpenAI temporary HTTP {r.status_code}: {r.text[:500]}")
     import time; time.sleep(5*(attempt+1)); continue
    if not r.ok:
-    detail=r.text[:800]
-    raise RuntimeError(f"OpenAI API HTTP {r.status_code}: {detail}")
-   data=r.json()\n   text=data.get("output_text","").strip()\n   if not text:\n    parts=[]\n    for item in data.get("output",[]) or []:\n     for part in item.get("content",[]) or []:\n      if part.get("type")=="output_text" and part.get("text"):\n       parts.append(part["text"])\n    text="".join(parts).strip()\n   if not text:\n    raise RuntimeError("OpenAI returned no text output. Response keys: "+",".join(sorted(data.keys())))\n   if text.startswith("```"):\n    text=text.strip()\n    text=text.split("\\n",1)[1] if "\\n" in text else text\n    if text.endswith("```"): text=text[:-3]\n    if text.startswith("json\\n"): text=text[5:]\n    text=text.strip()\n   return text
+    raise RuntimeError(f"OpenAI API HTTP {r.status_code}: {r.text[:800]}")
+   data=r.json()
+   text=data.get("output_text","").strip()
+   if not text:
+    parts=[]
+    for item in data.get("output",[]) or []:
+     for part in item.get("content",[]) or []:
+      if part.get("type")=="output_text" and part.get("text"):
+       parts.append(part["text"])
+    text="".join(parts).strip()
+   if not text:
+    raise RuntimeError("OpenAI returned no text output. Response keys: "+",".join(sorted(data.keys())))
+   if text.startswith("```"):
+    text=text.strip()
+    lines2=text.splitlines()
+    if lines2 and lines2[0].startswith("```"): lines2=lines2[1:]
+    if lines2 and lines2[-1].strip()=="```": lines2=lines2[:-1]
+    text="\n".join(lines2).strip()
+   return text
   except requests.RequestException as e:
    last=e
    import time; time.sleep(5*(attempt+1))
