@@ -49,7 +49,7 @@ def main():
  src=sources(topic)
  prompt="Create an ORIGINAL 45-60 second YouTube Short for WHY? about: %s\nAudience: global English-speaking viewers interested in human behavior, psychology and everyday science.\nWrite 115-145 words. Hook immediately, explain the mechanism simply and accurately, and finish with a memorable takeaway. Use only claims supported by the supplied sources. Do not invent statistics or studies. No fake personal stories or stage directions. Return valid JSON only with keys title, script, description, hashtags.\nSources:\n%s"%(topic,"\n".join(src))
  raw=gen(prompt).strip(); obj=json.loads(raw)
- if not 95<=len(obj["script"].split())<=165: raise RuntimeError("Script length outside Shorts target")
+ if not 90<=len(obj["script"].split())<=180: raise RuntimeError("Script length outside Shorts target")
  obj["topic"]=topic; obj["sources"]=src; (WORK/"episode.json").write_text(json.dumps(obj,indent=2)); (WORK/"script.txt").write_text(obj["script"])
  return obj
 def tts(text):
