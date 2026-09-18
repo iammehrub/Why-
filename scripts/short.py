@@ -19,9 +19,7 @@ def gen(prompt):
    if not r.ok:
     detail=r.text[:800]
     raise RuntimeError(f"OpenAI API HTTP {r.status_code}: {detail}")
-   text=r.json().get("output_text","").strip()
-   if not text: raise RuntimeError("OpenAI returned an empty output_text response.")
-   return text
+   data=r.json()\n   text=data.get("output_text","").strip()\n   if not text:\n    parts=[]\n    for item in data.get("output",[]) or []:\n     for part in item.get("content",[]) or []:\n      if part.get("type")=="output_text" and part.get("text"):\n       parts.append(part["text"])\n    text="".join(parts).strip()\n   if not text:\n    raise RuntimeError("OpenAI returned no text output. Response keys: "+",".join(sorted(data.keys())))\n   if text.startswith("```"):\n    text=text.strip()\n    text=text.split("\\n",1)[1] if "\\n" in text else text\n    if text.endswith("```"): text=text[:-3]\n    if text.startswith("json\\n"): text=text[5:]\n    text=text.strip()\n   return text
   except requests.RequestException as e:
    last=e
    import time; time.sleep(5*(attempt+1))
