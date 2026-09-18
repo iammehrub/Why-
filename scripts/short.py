@@ -1,13 +1,31 @@
 import os,json,subprocess,requests
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; WORK=ROOT/"work"; WORK.mkdir(exist_ok=True)
-OPENAI=os.environ["OPENAI_API_KEY"]; PEXELS=os.environ.get("PEXELS_API_KEY","")
+OPENAI=os.environ.get("OPENAI_API_KEY","").strip(); PEXELS=os.environ.get("PEXELS_API_KEY","").strip()
 TOPICS=["Why do we procrastinate?","Why do embarrassing memories stick?","Why does your brain crave novelty?","Why do we yawn when others yawn?","Why does music give you chills?","Why do we form habits?","Why does time feel faster as we get older?","Why do we get nervous before speaking?","Why does your brain notice your name?","Why do humans copy each other's behavior?","Why do we forget why we walked into a room?","Why does sleep affect memory?","Why do we get goosebumps?","Why does exercise affect mood?","Why are first impressions so powerful?","Why does multitasking feel productive?","Why do we remember stories better than lists?","Why do we seek patterns in random things?","Why does stress make concentration harder?"]
 def sources(q):
  r=requests.get("https://en.wikipedia.org/w/api.php",params={"action":"query","list":"search","srsearch":q,"format":"json","srlimit":5},timeout=30)
  return ["https://en.wikipedia.org/wiki/"+x["title"].replace(" ","_") for x in r.json().get("query",{}).get("search",[])] if r.ok else []
 def gen(prompt):
- r=requests.post("https://api.openai.com/v1/responses",headers={"Authorization":"Bearer "+OPENAI,"Content-Type":"application/json"},json={"model":"gpt-5.6-luna","input":prompt,"max_output_tokens":2200},timeout=180); r.raise_for_status(); return r.json().get("output_text","").strip()
+ if not OPENAI:
+  raise RuntimeError("OPENAI_API_KEY is missing. Add it as a GitHub Actions repository secret or repository variable named OPENAI_API_KEY.")
+ last=None
+ for attempt in range(3):
+  try:
+   r=requests.post("https://api.openai.com/v1/responses",headers={"Authorization":"Bearer "+OPENAI,"Content-Type":"application/json"},json={"model":"gpt-5.6-luna","input":prompt,"max_output_tokens":2200},timeout=180)
+   if r.status_code in (429,500,502,503,504):
+    last=RuntimeError(f"OpenAI temporary HTTP {r.status_code}: {r.text[:500]}")
+    import time; time.sleep(5*(attempt+1)); continue
+   if not r.ok:
+    detail=r.text[:800]
+    raise RuntimeError(f"OpenAI API HTTP {r.status_code}: {detail}")
+   text=r.json().get("output_text","").strip()
+   if not text: raise RuntimeError("OpenAI returned an empty output_text response.")
+   return text
+  except requests.RequestException as e:
+   last=e
+   import time; time.sleep(5*(attempt+1))
+ raise RuntimeError(f"OpenAI request failed after 3 attempts: {last}")
 def main():
  f=WORK/"used_topics.json"; used=set()
  if f.exists():
@@ -54,4 +72,6 @@ def upload(path,obj):
  body={"snippet":{"title":obj["title"][:100],"description":obj.get("description","")+"\n\n"+" ".join(obj.get("hashtags",[])),"categoryId":"27","tags":["psychology","science","human behavior","brain","why"]},"status":{"privacyStatus":"public","selfDeclaredMadeForKids":False}}
  r=yt.videos().insert(part="snippet,status",body=body,media_body=MediaFileUpload(str(path),chunksize=-1,resumable=True)).execute(); print("Published:",r["id"])
 if __name__=="__main__":
+ missing=[k for k in ("OPENAI_API_KEY","YOUTUBE_CLIENT_ID","YOUTUBE_CLIENT_SECRET","YOUTUBE_REFRESH_TOKEN") if not os.environ.get(k,"").strip()]
+ if missing: raise RuntimeError("Missing required GitHub Actions credentials: "+", ".join(missing))
  obj=main(); wav=tts(obj["script"]); bg=get_video(obj["topic"]); upload(render(wav,bg),obj)
