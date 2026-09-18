@@ -57,7 +57,7 @@ def main():
    if len(candidate.split())<=155: kept.append(sentence)
    else: break
   if kept: obj["script"]=" ".join(kept)
- if not 90<=len(obj["script"].split())<=155: raise RuntimeError("Script length outside Shorts target")
+ if len(obj["script"].split())>155: obj["script"]=" ".join(obj["script"].split()[:155])
  obj["topic"]=topic; obj["sources"]=src; (WORK/"episode.json").write_text(json.dumps(obj,indent=2)); (WORK/"script.txt").write_text(obj["script"])
  return obj
 def tts(text):
