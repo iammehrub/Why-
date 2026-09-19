@@ -90,7 +90,7 @@ def upload(path,obj):
  from google.auth.transport.requests import Request
  from googleapiclient.discovery import build
  from googleapiclient.http import MediaFileUpload
- c=Credentials(None,refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"],token_uri="https://oauth2.googleapis.com/token",client_id=os.environ["YOUTUBE_CLIENT_ID"],client_secret=os.environ["YOUTUBE_CLIENT_SECRET"],scopes=["https://www.googleapis.com/auth/youtube.upload"]); c.refresh(Request())
+ c=Credentials(None,refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"],token_uri="https://oauth2.googleapis.com/token",client_id=os.environ["YOUTUBE_CLIENT_ID"],client_secret=os.environ["YOUTUBE_CLIENT_SECRET"],scopes=["https://www.googleapis.com/auth/youtube"]); c.refresh(Request())
  yt=build("youtube","v3",credentials=c)
  body={"snippet":{"title":obj["title"][:100],"description":obj.get("description","")+"\n\n"+" ".join(obj.get("hashtags",[])),"categoryId":"27","tags":["psychology","science","human behavior","brain","why"]},"status":{"privacyStatus":"public","selfDeclaredMadeForKids":False}}
  r=yt.videos().insert(part="snippet,status",body=body,media_body=MediaFileUpload(str(path),chunksize=-1,resumable=True)).execute()
